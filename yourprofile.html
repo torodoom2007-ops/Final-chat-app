@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>fackmy.IL - עריכת פרופיל</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rubik', sans-serif; }
+        body { background: #0f172a url('appimg/back.jpg?v=2') center/cover no-repeat fixed; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; position: relative; }
+        body::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); z-index: 1; }
+        .card-container { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); width: 100%; max-width: 450px; border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); overflow: hidden; position: relative; z-index: 2; }
+        .card-header { background: linear-gradient(135deg, #8a2387, #e94057); color: white; padding: 25px; text-align: center; }
+        .card-body { padding: 25px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: bold; }
+        .input-group input, .input-group textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e1e1; border-radius: 16px; outline: none; font-size: 14px; }
+        .input-group input:focus, .input-group textarea:focus { border-color: #8a2387; }
+        .file-upload-box { border: 2px dashed #8a2387; padding: 15px; border-radius: 16px; text-align: center; background: #f8fafc; cursor: pointer; }
+        .btn-save { width: 100%; padding: 14px; border: none; border-radius: 20px; background: linear-gradient(135deg, #8a2387, #e94057); color: white; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 10px 20px rgba(233,64,87,0.3); }
+        .profile-pro-link{display:block;text-align:center;padding:12px;border-radius:14px;background:linear-gradient(120deg,#24134b,#8b5cf6,#f0abfc);color:#fff;text-decoration:none;font-weight:700;margin:12px 0;box-shadow:0 8px 24px #8b5cf655;animation:proPulse 2.5s infinite}
+        @keyframes proPulse{0%,100%{transform:translateY(0);box-shadow:0 8px 24px #8b5cf655}50%{transform:translateY(-2px);box-shadow:0 12px 30px #f0abfc88}}
+    </style>
+</head>
+<body>
+
+<div class="card-container">
+    <div class="card-header">
+        <h2>עריכת הפרופיל שלך</h2>
+    </div>
+    <div class="card-body">
+        <form id="profile-form" onsubmit="saveProfile(event)">
+            <div class="input-group">
+                <label>שם מלא</label>
+                <input type="text" id="fullname" required>
+            </div>
+            <div class="input-group">
+                <label>עיר מגורים</label>
+                <input type="text" id="city" required>
+            </div>
+            <div class="input-group">
+                <label>תאריך לידה (לחישוב גיל)</label>
+                <input type="date" id="birthdate" required>
+            </div>
+            <div class="input-group">
+                <label>העלאת תמונת פרופיל מהמכשיר</label>
+                <div class="file-upload-box" onclick="document.getElementById('imagefile').click()">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 24px; color: #8a2387; margin-bottom: 5px;"></i>
+                    <p id="file-name-label" style="font-size: 13px; color: #555;">לחץ לבחירת תמונה מהגלריה</p>
+                </div>
+                <input type="file" id="imagefile" accept="image/*" style="display:none" onchange="previewFile()">
+            </div>
+            <div class="input-group">
+                <label>תמונה נוספת (למשתמשי Pro)</label>
+                <input type="file" id="imagefile2" accept="image/*" onchange="previewFile2()" style="width:100%;padding:8px">
+                <p id="file-name-label2" style="font-size:12px;color:#666;margin-top:5px">תמונה שנייה זמינה במנוי Pro</p>
+                <img id="preview-image" alt="תצוגה מקדימה" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:18px;margin-top:10px;border:2px solid #eee">
+                <img id="preview-image2" alt="תצוגה מקדימה לתמונה השנייה" style="display:none;width:100px;height:100px;object-fit:cover;border-radius:18px;margin-top:10px;border:2px solid #eee">
+                <a href="premium.html" style="display:inline-block;margin-top:8px;color:#a21caf;font-weight:bold">✨ שדרוג ל-Pro — $3 לחודש</a>
+            </div>
+            <div class="input-group">
+                <label>תיאור אישי (Bio)</label>
+                <textarea id="bio" rows="3" placeholder="ספר על עצמך..."></textarea>
+            </div>
+            <button type="submit" class="btn-save">שמור שינויים</button>
+        </form>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_NsvhGHX9nUMkEy_N8M5wLmFP7gPT__w",
+      authDomain: "my-app-329b0.firebaseapp.com",
+      projectId: "my-app-329b0",
+      storageBucket: "my-app-329b0.firebasestorage.app",
+      messagingSenderId: "335805777525",
+      appId: "1:335805777525:web:1bcf62a3b5193cf3aada3c",
+      measurementId: "G-WFGBW108BL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let base64Image = "", base64Image2 = "";
+
+    auth.onAuthStateChanged(async (user) => {
+        if (!user) { window.location.href = 'index.html'; return; }
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+            const data = snap.data();
+            document.getElementById('fullname').value = data.fullName || '';
+            document.getElementById('city').value = data.city || '';
+            document.getElementById('birthdate').value = data.birthDate || '';
+            document.getElementById('bio').value = data.bio || '';
+            base64Image = data.profileImg || '';
+            base64Image2 = data.profileImg2 || '';
+            if (base64Image) { document.getElementById('preview-image').src = base64Image; document.getElementById('preview-image').style.display = 'block'; }
+            if (base64Image2) { document.getElementById('preview-image2').src = base64Image2; document.getElementById('preview-image2').style.display = 'block'; }
+            if (base64Image) {
+                document.getElementById('file-name-label').innerText = "התמונה נבחרה בהצלחה ✓";
+            }
+        }
+    });
+
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = reject;
+                img.onload = () => {
+                    const scale = Math.min(1, 1000 / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(img.width * scale));
+                    canvas.height = Math.max(1, Math.round(img.height * scale));
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.78));
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    window.previewFile = function() {
+        const file = document.getElementById('imagefile').files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/') || file.size > 4 * 1024 * 1024) { alert("יש לבחור קובץ תמונה עד 4MB"); document.getElementById('imagefile').value = ""; return; }
+        compressImage(file).then(dataUrl => {
+            base64Image = dataUrl;
+            const preview = document.getElementById('preview-image');
+            preview.src = base64Image; preview.style.display = 'block';
+            document.getElementById('file-name-label').innerText = file.name + " ✓";
+        }).catch(() => alert("לא ניתן לקרוא את התמונה שבחרת."));
+    };
+
+    window.previewFile2 = function() {
+        const file = document.getElementById('imagefile2').files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/') || file.size > 4 * 1024 * 1024) { alert("יש לבחור קובץ תמונה עד 4MB"); document.getElementById('imagefile2').value = ""; return; }
+        compressImage(file).then(dataUrl => {
+            base64Image2 = dataUrl;
+            const preview = document.getElementById('preview-image2');
+            preview.src = base64Image2; preview.style.display = 'block';
+            document.getElementById('file-name-label2').innerText = file.name + " ✓";
+        }).catch(() => alert("לא ניתן לקרוא את התמונה שבחרת."));
+    };
+
+    window.saveProfile = async function(e) {
+        e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) return;
+
+        try {
+            const birthDate = document.getElementById('birthdate').value;
+            const age = birthDate ? (new Date().getFullYear() - new Date(birthDate).getFullYear()) : 0;
+            if (!birthDate || age < 18 || new Date(birthDate) > new Date()) { alert("השירות מיועד לבני 18 ומעלה בלבד."); return; }
+            const currentSnap = await getDoc(doc(db, "users", user.uid));
+            const currentData = currentSnap.exists() ? currentSnap.data() : {};
+            if (base64Image2 && currentData.role !== "pro" && currentData.isPro !== true && currentData.subscriptionStatus !== "pro-demo") {
+                alert("תמונה שנייה זמינה למנוי Pro. אפשר לשמור את התמונה הראשית ולשדרג בהמשך.");
+                base64Image2 = currentData.profileImg2 || "";
+            }
+            await setDoc(doc(db, "users", user.uid), {
+                fullName: document.getElementById('fullname').value,
+                city: document.getElementById('city').value,
+                birthDate: document.getElementById('birthdate').value,
+                profileImg: base64Image,
+                profileImg2: base64Image2,
+                role: currentData.role || 'regular',
+                isPro: currentData.isPro === true,
+                bio: document.getElementById('bio').value,
+                profileCompleted: true
+            }, { merge: true });
+
+            window.location.href = 'home.html';
+        } catch (err) {
+            alert("שגיאה בשמירה: " + err.message);
+        }
+    };
+</script>
+</body>
+</html>

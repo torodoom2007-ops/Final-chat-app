@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>fackmy.IL - פיד היכרויות</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rubik', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #0f172a url('appimg/back.jpg') center/cover no-repeat fixed; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px 15px; position: relative; }
+        body::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); z-index: 1; }
+
+        .top-navbar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); width: 100%; max-width: 650px; padding: 12px 20px; border-radius: 22px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); margin-bottom: 20px; position: relative; z-index: 2; }
+        .logo-container { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+        .logo-container img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+        .logo-container h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #8a2387, #e94057); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-buttons { display: flex; gap: 8px; align-items: center; flex: 0 1 auto; min-width: 0; }
+        .nav-btn { background: #f0f0f0; border: none; padding: 8px 14px; border-radius: 18px; color: #555; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; position: relative; }
+        .unread-dot-badge { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; background: #e94057; border-radius: 50%; border: 2px solid white; display: none; }
+
+        .toast-banner { position: fixed; top: -80px; background: white; border-right: 5px solid #e94057; padding: 12px 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 12px; z-index: 2000; transition: top 0.4s ease; cursor: pointer; max-width: 90%; }
+        .toast-banner.show { top: 20px; }
+
+        .search-container { width: 100%; max-width: 650px; margin-bottom: 20px; position: relative; z-index: 2; }
+        .search-container input { width: 100%; padding: 14px 20px 14px 45px; background: rgba(255, 255, 255, 0.95); border: none; border-radius: 20px; font-size: 14px; outline: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+        .search-container i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #888; }
+
+        .feed-grid { width: 100%; max-width: 650px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; position: relative; z-index: 2; }
+        .user-card-grid { background: rgba(255, 255, 255, 0.95); border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; position: relative; }
+        .card-img-container { width: 100%; height: 160px; position: relative; cursor: pointer; background: #f0f0f0; }
+        .card-img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .like-btn-floating { position: absolute; top: 10px; right: 10px; background: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; }
+        .like-btn-floating i { font-size: 18px; color: #e94057; transition: transform .18s ease; }
+        .like-btn-floating:active i { transform: scale(1.25); }
+        .like-btn-floating:disabled { opacity: .65; cursor: wait; }
+        .like-btn-floating.liked { background: #fff0f3; }
+        .like-btn-floating.liked i { color: #e94057; }
+        @media (max-width: 520px) { body { padding: 12px 10px; } .top-navbar { max-width: 100%; padding: 10px; gap: 8px; flex-wrap: wrap; justify-content: center; border-radius: 20px; } .logo-container { justify-content: center; width: 100%; } .logo-container h1 { font-size: 20px; } .nav-buttons { width: 100%; justify-content: center; flex-wrap: wrap; gap: 7px; } .nav-btn { justify-content: center; padding: 9px 12px; font-size: 13px; } .feed-grid { gap: 10px; } .card-img-container { height: clamp(145px, 48vw, 230px); } .user-card-grid { border-radius: 20px; } .card-content-area { padding: 10px; } .card-content-area h3 { font-size: 15px; overflow-wrap: anywhere; } }
+        .card-content-area { padding: 12px 15px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+
+        /* עיצוב הפוטר המשפטי בתחתית האתר */
+        .site-footer { width: 100%; max-width: 650px; text-align: center; padding: 20px 10px; position: relative; z-index: 2; margin-top: auto; color: rgba(255, 255, 255, 0.8); font-size: 12px; border-top: 1px solid rgba(255, 255, 255, 0.15); }
+        .footer-links { display: flex; justify-content: center; gap: 15px; margin-top: 8px; flex-wrap: wrap; }
+        .footer-links a { color: #fff; text-decoration: none; font-weight: 500; transition: opacity 0.2s; }
+        .footer-links a:hover { opacity: 0.7; text-decoration: underline; }
+
+        .pro-badge{display:inline-block;vertical-align:middle;padding:3px 7px;border-radius:999px;background:linear-gradient(100deg,#f5d77e,#f0b8ff);color:#2b1740;font-size:9px;font-weight:800;box-shadow:0 0 14px #f0b8ff88;animation:proGlow 2s ease-in-out infinite alternate}@keyframes proGlow{to{box-shadow:0 0 20px #f5d77e}}
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-card { background: white; border-radius: 28px; width: 100%; max-width: 400px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3); position: relative; }
+        .modal-close-x { position: absolute; top: 15px; left: 15px; background: rgba(255,255,255,0.3); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .modal-header { background: linear-gradient(135deg, #8a2387, #e94057); color: white; padding: 25px; text-align: center; }
+        .modal-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white; margin-bottom: 10px; }
+        .modal-body { padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="toast-banner" id="toast-banner" onclick="goToChat()">
+        <i class="fa-solid fa-comment-dots" style="font-size: 24px; color: #e94057;"></i>
+        <div>
+            <h4 id="toast-name" style="font-size: 14px; color: #333;">הודעה חדשה ב-fackmy.IL</h4>
+            <p id="toast-msg" style="font-size: 12px; color: #666;">לחץ לצפייה</p>
+        </div>
+    </div>
+
+    <div class="top-navbar">
+        <div class="logo-container">
+            <img src="appimg/logo.jpg" alt="fackmy.IL Logo">
+            <h1>fackmy.IL</h1>
+        </div>
+        <div class="nav-buttons">
+            <a href="premium.html" class="nav-btn" style="background:linear-gradient(110deg,#f6d782,#e5b6ff);color:#28153c;font-weight:800"><i class="fa-solid fa-gem"></i> Pro</a>
+            <a href="afterlog.html" class="nav-btn"><i class="fa-solid fa-user"></i> פרופיל</a>
+            <a href="chats.html" class="nav-btn">
+                <i class="fa-solid fa-comments"></i> צ'אטים
+                <div class="unread-dot-badge" id="chat-unread-dot"></div>
+            </a>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="חפש פרופיל ב-fackmy.IL לפי שם..." oninput="filterProfiles()">
+        <i class="fa-solid fa-magnifying-glass"></i>
+    </div>
+
+    <div class="feed-grid" id="feed-grid">
+        <p style="text-align: center; color: white; grid-column: span 2;">טוען פרופילים...</p>
+    </div>
+
+    <!-- פוטר משפטי בתחתית האתר -->
+    <footer class="site-footer">
+        <div>© 2026 fackmy.IL • כל הזכויות שמורות (18+)</div>
+        <div class="footer-links">
+            <a href="privacy.html">מדיניות פרטיות</a>
+            <a href="terms.html">תנאי שימוש</a>
+            <a href="guidelines.html">הנחיות קהילה</a>
+        </div>
+    </footer>
+
+    <div class="modal-overlay" id="profile-modal">
+        <div class="modal-card">
+            <button class="modal-close-x" onclick="closeModal()">×</button>
+            <div class="modal-header">
+                <img id="m-avatar" class="modal-avatar" src="" alt="Avatar">
+                <h2 id="m-name">-</h2>
+                <p id="m-username">@username</p>
+            </div>
+            <div class="modal-body">
+                <p id="m-bio" style="margin-bottom: 15px; color: #555;">-</p>
+                <button id="btn-start-chat" style="width: 100%; padding: 12px; border-radius: 18px; border: none; background: linear-gradient(135deg, #8a2387, #e94057); color: white; font-weight: bold; cursor: pointer;">
+                    <i class="fa-solid fa-paper-plane"></i> שלח הודעה / צ'אט
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="anon-modal">
+        <div class="modal-card" style="padding: 25px; text-align: center;">
+            <button class="modal-close-x" style="color: #333; background: #eee;" onclick="document.getElementById('anon-modal').style.display='none'">×</button>
+            <i class="fa-solid fa-lock" style="font-size: 40px; color: #8a2387; margin-bottom: 15px;"></i>
+            <h3 style="color: #333; margin-bottom: 10px;">פיצ'ר לרושמים בלבד ב-fackmy.IL</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">משתמש אנונימי אינו יכול לשלוח לייקים או הודעות. הירשם עכשיו בחינם!</p>
+            <button onclick="window.location.href='index.html'" style="width: 100%; padding: 12px; border-radius: 18px; border: none; background: linear-gradient(135deg, #8a2387, #e94057); color: white; font-weight: bold; cursor: pointer;">
+                להרשמה / התחברות
+            </button>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, limit, runTransaction, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_NsvhGHX9nUMkEy_N8M5wLmFP7gPT__w",
+      authDomain: "my-app-329b0.firebaseapp.com",
+      projectId: "my-app-329b0",
+      storageBucket: "my-app-329b0.firebasestorage.app",
+      messagingSenderId: "335805777525",
+      appId: "1:335805777525:web:1bcf62a3b5193cf3aada3c",
+      measurementId: "G-WFGBW108BL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a0a0'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/></svg>";
+    let allProfiles = [], currentTargetUid = null, latestTargetChat = null;
+    const likeBusy = new Set();
+    function showActionToast(message, type = 'success') {
+        let toast = document.getElementById('action-toast');
+        if (!toast) { toast = document.createElement('div'); toast.id = 'action-toast'; toast.setAttribute('role', 'status'); toast.setAttribute('aria-live', 'polite'); document.body.appendChild(toast); }
+        toast.textContent = message;
+        toast.style.cssText = `position:fixed;z-index:3000;top:18px;left:50%;transform:translateX(-50%);max-width:90vw;padding:13px 18px;border-radius:14px;color:#fff;background:${type === 'error' ? '#a61b36' : '#237a4b'};box-shadow:0 8px 24px #0004;font-weight:600;text-align:center;`;
+        clearTimeout(window.actionToastTimer); window.actionToastTimer = setTimeout(() => toast.remove(), 2800);
+    }
+
+    async function loadFeed() {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        updateDoc(doc(db, "users", currentUser.uid), { isOnline: true });
+        window.addEventListener('beforeunload', () => updateDoc(doc(db, "users", currentUser.uid), { isOnline: false }));
+
+        listenForNotifications(currentUser.uid);
+
+        const qFeed = query(collection(db, "users"), orderBy("createdAt", "desc"), limit(20));
+        const snap = await getDocs(qFeed);
+        
+        allProfiles = [];
+        for (const docSnap of snap.docs) {
+            if (docSnap.id === currentUser.uid) continue;
+
+            const data = docSnap.data();
+            let hasLiked = false;
+            const likeSnap = await getDoc(doc(db, "users", docSnap.id, "likes", currentUser.uid));
+            if (likeSnap.exists()) {
+                const hours = (Date.now() - new Date(likeSnap.data().timestamp).getTime()) / (1000 * 60 * 60);
+                if (hours < 24) hasLiked = true;
+            }
+            allProfiles.push({ id: docSnap.id, data, hasLiked });
+        }
+        renderProfiles(allProfiles);
+    }
+
+    function renderProfiles(profiles) {
+        const feedGrid = document.getElementById('feed-grid');
+        feedGrid.replaceChildren();
+        if (profiles.length === 0) {
+            const empty = document.createElement('p');
+            empty.textContent = 'אין פרופילים להצגה';
+            empty.style.cssText = 'text-align:center;color:white;grid-column:span 2';
+            feedGrid.appendChild(empty);
+            return;
+        }
+        profiles.forEach(p => {
+            const data = p.data || {};
+            const card = document.createElement('div');
+            card.className = 'user-card-grid';
+            const imageWrap = document.createElement('div');
+            imageWrap.className = 'card-img-container';
+            imageWrap.addEventListener('click', () => window.openModal(data, p.id));
+            const likeBtn = document.createElement('button');
+            likeBtn.className = 'like-btn-floating' + (p.hasLiked ? ' liked' : '');
+            likeBtn.setAttribute('aria-label', 'לייק');
+            const heart = document.createElement('i');
+            heart.className = p.hasLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+            heart.id = 'heart-' + p.id;
+            likeBtn.appendChild(heart);
+            likeBtn.addEventListener('click', event => { event.stopPropagation(); window.toggleLike(p.id, likeBtn); });
+            const img = document.createElement('img');
+            img.alt = 'תמונת פרופיל';
+            img.src = data.profileImg || defaultAvatar;
+            imageWrap.append(likeBtn, img);
+            const content = document.createElement('div');
+            content.className = 'card-content-area';
+            content.addEventListener('click', () => window.openModal(data, p.id));
+            const heading = document.createElement('h3');
+            heading.textContent = data.fullName || data.username || 'משתמש';
+            if (data.role === 'pro' || data.isPro === true || data.subscriptionStatus === 'pro-demo') {
+                const badge = document.createElement('span');
+                badge.className = 'pro-badge';
+                badge.textContent = '✦ PRO';
+                heading.append(' ', badge);
+                card.classList.add('pro-profile-card');
+            }
+            const likes = document.createElement('span');
+            likes.style.cssText = 'font-size:11px;color:#888';
+            likes.append('❤️ ');
+            const count = document.createElement('span');
+            count.id = 'likes-count-' + p.id;
+            count.textContent = String(data.likesCount || 0);
+            likes.appendChild(count);
+            content.append(heading, likes);
+            card.append(imageWrap, content);
+            feedGrid.appendChild(card);
+            getCountFromServer(collection(db, 'users', p.id, 'likes')).then(result => { const node = document.getElementById('likes-count-' + p.id); if (node) node.textContent = String(result.data().count || 0); }).catch(err => console.warn('Like count unavailable', err));
+        });
+    }
+
+    function listenForNotifications(uid) {
+        const q = query(collection(db, "chats"), where("participants", "array-contains", uid));
+        onSnapshot(q, (snapshot) => {
+            let hasUnread = false;
+            snapshot.docs.forEach(cDoc => {
+                const cData = cDoc.data();
+                if (cData.lastSenderId && cData.lastSenderId !== uid && !cData.seen) {
+                    hasUnread = true;
+                    showToast(cData.lastSenderName || 'משתמש', cData.lastMessage);
+                    latestTargetChat = cData.lastSenderId;
+                }
+            });
+            document.getElementById('chat-unread-dot').style.display = hasUnread ? 'block' : 'none';
+        });
+    }
+
+    function showToast(name, msg) {
+        const toast = document.getElementById('toast-banner');
+        document.getElementById('toast-name').innerText = name;
+        document.getElementById('toast-msg').innerText = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    window.goToChat = function() {
+        if (latestTargetChat) window.location.href = `chat.html?target=${latestTargetChat}`;
+    };
+
+    window.toggleLike = async function(targetUid, button) {
+        const currentUser = auth.currentUser;
+        if (!currentUser) { showActionToast('יש להתחבר כדי לשלוח לייק.', 'error'); return; }
+        if (currentUser.isAnonymous) {
+            document.getElementById('anon-modal').style.display = 'flex';
+            return;
+        }
+        if (currentUser.uid === targetUid) { showActionToast('אי אפשר לשלוח לייק לעצמך.', 'error'); return; }
+        if (likeBusy.has(targetUid)) return;
+        const heartIcon = document.getElementById(`heart-${targetUid}`);
+        const countSpan = document.getElementById(`likes-count-${targetUid}`);
+        if (!heartIcon || !countSpan || !button) return;
+        likeBusy.add(targetUid); button.disabled = true;
+        const oldClass = heartIcon.className;
+        try {
+            const likeRef = doc(db, 'users', targetUid, 'likes', currentUser.uid);
+            const outcome = await runTransaction(db, async (transaction) => {
+                const likeSnap = await transaction.get(likeRef);
+                if (likeSnap.exists()) {
+                    const time = Date.parse(likeSnap.data().timestamp || '');
+                    if (Number.isFinite(time) && Date.now() - time < 24 * 60 * 60 * 1000) return { already: true };
+                }
+                transaction.set(likeRef, { timestamp: new Date().toISOString(), fromUid: currentUser.uid });
+                return { already: false };
+            });
+            if (outcome.already) {
+                heartIcon.className = 'fa-solid fa-heart'; button.classList.add('liked');
+                showActionToast('כבר שלחת לייק לפרופיל הזה ב־24 השעות האחרונות.');
+            } else {
+                heartIcon.className = 'fa-solid fa-heart'; button.classList.add('liked');
+                heartIcon.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.5)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
+                countSpan.textContent = String(Number(countSpan.textContent || 0) + 1);
+                const profile = allProfiles.find(p => p.id === targetUid); if (profile) profile.hasLiked = true;
+                showActionToast('❤️ הלייק נשלח בהצלחה!');
+            }
+        } catch (error) {
+            heartIcon.className = oldClass;
+            console.error('Like failed:', error);
+            showActionToast(error.code === 'permission-denied' ? 'אין הרשאה לשמור לייק. צריך לבדוק את כללי Firebase.' : 'לא הצלחנו לשמור את הלייק. בדוק חיבור ונסה שוב.', 'error');
+        } finally {
+            likeBusy.delete(targetUid); button.disabled = false;
+        }
+    };
+
+    window.openModal = function(data, uid) {
+        currentTargetUid = uid;
+        document.getElementById('m-avatar').src = data.profileImg || defaultAvatar;
+        document.getElementById('m-name').innerText = (data.fullName || data.username || 'משתמש') + ((data.role === 'pro' || data.isPro === true || data.subscriptionStatus === 'pro-demo') ? ' ✦ PRO' : '');
+        document.getElementById('m-username').innerText = '@' + (data.username || 'user');
+        document.getElementById('m-bio').innerText = data.bio || 'טרם הוזן תיאור...';
+
+        document.getElementById('btn-start-chat').onclick = () => {
+            if (auth.currentUser.isAnonymous) {
+                document.getElementById('anon-modal').style.display = 'flex';
+            } else {
+                window.location.href = `chat.html?target=${currentTargetUid}`;
+            }
+        };
+        document.getElementById('profile-modal').style.display = 'flex';
+    };
+
+    window.closeModal = function() { document.getElementById('profile-modal').style.display = 'none'; };
+
+    auth.onAuthStateChanged((user) => { if (user) loadFeed(); else window.location.href = 'index.html'; });
+</script>
+</body>
+</html>

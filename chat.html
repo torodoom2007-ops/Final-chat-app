@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>fackmy.IL - צ'אט</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rubik', sans-serif; }
+        html, body { height: 100%; overflow: hidden; background: #f0f3f8; }
+        body { display: flex; flex-direction: column; }
+
+        .chat-header { background: white; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
+        .header-user { display: flex; align-items: center; gap: 10px; }
+        .avatar-container { position: relative; width: 38px; height: 38px; }
+        .avatar-container img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .status-dot { width: 9px; height: 9px; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid white; }
+        .status-dot.online { background: #2ecc71; }
+        .status-dot.offline { background: #ccc; }
+        .header-info h3 { font-size: 14px; color: #333; }
+        .header-info p { font-size: 10px; color: #888; }
+
+        .messages-area { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #eef2f5; }
+        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 16px; font-size: 13px; position: relative; line-height: 1.4; word-break: break-word; }
+        .msg-bubble.sent { background: linear-gradient(135deg, #8a2387, #e94057); color: white; align-self: flex-start; border-bottom-right-radius: 4px; }
+        .msg-bubble.received { background: white; color: #333; align-self: flex-end; border-bottom-left-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .msg-meta { font-size: 9px; opacity: 0.8; margin-top: 3px; display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
+
+        .suggestions-bar { background: white; padding: 6px 10px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid #eee; white-space: nowrap; flex-shrink: 0; }
+        .sugg-chip { background: #f0f3f8; padding: 5px 10px; border-radius: 14px; font-size: 11px; color: #8a2387; cursor: pointer; border: 1px solid #e1e1e1; font-weight: 500; }
+
+        .input-bar { background: white; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #eee; flex-shrink: 0; }
+        .input-bar input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px; }
+        .btn-send { background: linear-gradient(135deg, #8a2387, #e94057); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="chat-header">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-arrow-right" onclick="window.location.href='chats.html'" style="cursor: pointer; font-size: 16px; color: #555;"></i>
+        <div class="header-user">
+            <div class="avatar-container">
+                <img id="header-avatar" src="" alt="Avatar">
+                <div class="status-dot offline" id="header-status"></div>
+            </div>
+            <div class="header-info">
+                <h3 id="header-name">טוען...</h3>
+                <p id="header-text">אופליין</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="messages-area" id="messages-area"></div>
+
+<div class="suggestions-bar">
+    <div class="sugg-chip" onclick="useSugg('היי, אשמח להכיר!')">היי, אשמח להכיר!</div>
+    <div class="sugg-chip" onclick="useSugg('מה נשמע?')">מה נשמע?</div>
+    <div class="sugg-chip" onclick="useSugg('מה התחביבים שלך?')">מה התחביבים שלך?</div>
+    <div class="sugg-chip" onclick="useSugg('אהבתי את הפרופיל שלך!')">אהבתי את הפרופיל!</div>
+    <div class="sugg-chip" onclick="useSugg('איך עובר עליך היום?')">איך עובר עליך היום?</div>
+</div>
+
+<div class="input-bar">
+    <input type="text" id="msg-input" placeholder="הקלד הודעה..." onkeypress="if(event.key === 'Enter') sendMessage()">
+    <button class="btn-send" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, query, orderBy, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_NsvhGHX9nUMkEy_N8M5wLmFP7gPT__w",
+      authDomain: "my-app-329b0.firebaseapp.com",
+      projectId: "my-app-329b0",
+      storageBucket: "my-app-329b0.firebasestorage.app",
+      messagingSenderId: "335805777525",
+      appId: "1:335805777525:web:1bcf62a3b5193cf3aada3c",
+      measurementId: "G-WFGBW108BL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUid = urlParams.get('target');
+    let chatId = null, currentUser = null, myName = "";
+
+    const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a0a0'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/></svg>";
+
+    window.useSugg = function(text) { document.getElementById('msg-input').value = text; };
+
+    auth.onAuthStateChanged(async (user) => {
+        if (!user || !targetUid) { window.location.href = 'chats.html'; return; }
+        currentUser = user;
+
+        const myDoc = await getDoc(doc(db, "users", user.uid));
+        if (myDoc.exists()) myName = myDoc.data().fullName || myDoc.data().username;
+
+        await updateDoc(doc(db, "users", user.uid), { isOnline: true });
+        window.addEventListener('beforeunload', () => updateDoc(doc(db, "users", user.uid), { isOnline: false }));
+
+        onSnapshot(doc(db, "users", targetUid), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('header-name').innerText = data.fullName || data.username;
+                document.getElementById('header-avatar').src = data.profileImg || defaultAvatar;
+                document.getElementById('header-status').className = data.isOnline ? 'status-dot online' : 'status-dot offline';
+                document.getElementById('header-text').innerText = data.isOnline ? 'אונליין עכשיו' : 'אופליין';
+            }
+        });
+
+        chatId = user.uid < targetUid ? `${user.uid}_${targetUid}` : `${targetUid}_${user.uid}`;
+
+        const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
+        onSnapshot(q, (snapshot) => {
+            const area = document.getElementById('messages-area');
+            area.innerHTML = '';
+            snapshot.forEach((docSnap) => {
+                const msg = docSnap.data();
+                const isSent = msg.senderId === user.uid;
+                const time = new Date(msg.timestamp).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+
+                if (!isSent && !msg.seen) {
+                    updateDoc(doc(db, "chats", chatId, "messages", docSnap.id), { seen: true });
+                    updateDoc(doc(db, "chats", chatId), { seen: true });
+                }
+
+                const bubble = document.createElement('div');
+                bubble.className = `msg-bubble ${isSent ? 'sent' : 'received'}`;
+                const body = document.createElement('div');
+                body.textContent = String(msg.text || '');
+                const meta = document.createElement('div');
+                meta.className = 'msg-meta';
+                meta.textContent = time + (isSent && msg.seen ? ' ✓✓' : '');
+                bubble.appendChild(body); bubble.appendChild(meta); area.appendChild(bubble);
+            });
+            area.scrollTop = area.scrollHeight;
+        });
+    });
+
+    window.sendMessage = async function() {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if (!text || !currentUser) return;
+
+        if (text.length > 2000) { alert("ההודעה ארוכה מדי (מקסימום 2000 תווים)."); return; }
+        try {
+            const chatRef = doc(db, "chats", chatId);
+            const existingChat = await getDoc(chatRef);
+            const meRef = doc(db, "users", currentUser.uid);
+            const meSnap = await getDoc(meRef);
+            const me = meSnap.exists() ? meSnap.data() : {};
+            const isPro = me.role === "pro" || me.isPro === true || me.subscriptionStatus === "pro-demo";
+            const isRegular = !isPro;
+            const now = Date.now();
+            const today = new Date().toISOString().slice(0, 10);
+            let dailyCount = me.dailyMessageDate === today ? Number(me.dailyMessageCount || 0) : 0;
+            if (isRegular && dailyCount >= 150) {
+                alert("הגעת למגבלת 150 הודעות ביום במסלול החינמי. המגבלה תתאפס בחצות UTC.");
+                return;
+            }
+            if (!existingChat.exists() && isRegular) {
+                const cutoff = now - 24 * 60 * 60 * 1000;
+                const recentTargets = Array.isArray(me.initiatedTargets24h) ? me.initiatedTargets24h.filter(x => x && Number(x.at) > cutoff) : [];
+                const alreadyContacted = recentTargets.some(x => x.uid === targetUid);
+                if (!alreadyContacted && recentTargets.length >= 5) {
+                    alert("הגעת למגבלת פנייה ל־5 משתמשים במהלך 24 שעות. אפשר להמשיך לענות בשיחות קיימות או לשדרג ל-Pro.");
+                    window.location.href = "premium.html";
+                    return;
+                }
+                if (!alreadyContacted) recentTargets.push({ uid: targetUid, at: now });
+                await updateDoc(meRef, { initiatedTargets24h: recentTargets });
+            }
+            if (isRegular) await updateDoc(meRef, { dailyMessageDate: today, dailyMessageCount: dailyCount + 1 });
+            await setDoc(chatRef, {
+                participants: [currentUser.uid, targetUid],
+                initiatedBy: existingChat.exists() ? (existingChat.data().initiatedBy || currentUser.uid) : currentUser.uid,
+                lastMessage: text,
+                lastSenderId: currentUser.uid,
+                lastSenderName: myName,
+                seen: false,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            await addDoc(collection(db, "chats", chatId, "messages"), {
+                text: text, senderId: currentUser.uid,
+                timestamp: new Date().toISOString(), seen: false
+            });
+            input.value = '';
+        } catch (err) {
+            console.error(err);
+            alert("לא ניתן לשלוח את ההודעה. בדוק את החיבור והרשאות Firebase.");
+        }
+    };
+</script>
+</body>
+</html>
